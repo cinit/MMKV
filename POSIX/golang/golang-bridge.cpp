@@ -707,4 +707,25 @@ MMKV_EXPORT bool getNameSpace(GoStringWrap_t rootPath) {
     return false;
 }
 
+MMKV_EXPORT bool checkExist(GoStringWrap_t mmapID, GoStringWrap_t rootPath) {
+   if (!mmapID.ptr) {
+        return false;
+    }
+    auto id = string(mmapID.ptr, mmapID.length);
+    if (rootPath.ptr) {
+        auto path = string(rootPath.ptr, rootPath.length);
+        return MMKV::checkExist(id, &path);
+    }
+    return MMKV::checkExist(id, nullptr);
+}
+
+MMKV_EXPORT uint64_t importFrom(void *handle, void *srcHandle) {
+    MMKV *kv = static_cast<MMKV *>(handle);
+    MMKV *kvSrc = static_cast<MMKV *>(srcHandle);
+    if (kv && kvSrc) {
+        return kv->importFrom(kvSrc);
+    }
+    return 0;
+}
+
 #endif // CGO

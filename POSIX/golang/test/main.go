@@ -42,6 +42,7 @@ func main() {
 	testCompareBeforeSet()
 	testRemoveStorage()
 	testReadOnly()
+	testImport()
 }
 
 func functionalTest() {
@@ -331,7 +332,9 @@ func testRemoveStorage() {
 	kv := mmkv.MMKVWithIDAndMode("test_remove", mmkv.MMKV_MULTI_PROCESS)
 	kv.SetBool(true, "bool")
 
+	fmt.Println("check exist = ", mmkv.CheckExist("test_remove"))
 	mmkv.RemoveStorage("test_remove")
+	fmt.Println("after remove, check exist = ", mmkv.CheckExist("test_remove"))
 	kv = mmkv.MMKVWithIDAndMode("test_remove", mmkv.MMKV_MULTI_PROCESS)
 	if kv.Count() != 0 {
 		panic("storage not successfully remove")
@@ -377,6 +380,45 @@ func testNameSpace() {
 	fmt.Println("NameSpace:", ns.GetRootDir())
 	kv := ns.MMKVWithID("test_namespace")
 	testMMKVImp(kv, false)
+}
+
+func testImport() {
+	mmapID := "testImportSrc"
+	src := mmkv.MMKVWithID(mmapID)
+	src.SetBool(true, "bool")
+	src.SetInt32(-2147483648, "int")                   // math.MinInt32
+	src.SetUInt64(uint64(9223372036854775807), "long") // math.MaxInt64
+	src.SetString("test import", "string")
+
+	dst := mmkv.MMKVWithID("testImportDst")
+	dst.ClearAll()
+	dst.EnableAutoKeyExpire(1)
+	dst.SetBool(false, "bool")
+	dst.SetInt32(-1, "int")          // math.MinInt32
+	dst.SetUInt64(uint64(0), "long") // math.MaxInt64
+	dst.SetString(mmapID, "string")
+
+	count := dst.ImportFrom(src)
+	if count != 4 || dst.Count() != 4 {
+		fmt.Println("MMKV: import check count fail")
+	}
+	if !dst.GetBool("bool") {
+		fmt.Println("MMKV: import check bool fail")
+	}
+	if dst.GetInt32("int") != -2147483648 {
+		fmt.Println("MMKV: import check int fail")
+	}
+	if dst.GetUInt64("long") != 9223372036854775807 {
+		fmt.Println("MMKV: import check long fail")
+	}
+	if dst.GetString("string") != "test import" {
+		fmt.Println("MMKV: import check string fail")
+	}
+
+	time.Sleep(2 * time.Second)
+	if dst.CountNonExpiredKeys() != 0 {
+		fmt.Println("MMKV: import check expire fail")
+	}
 }
 
 func logHandler(level int, file string, line int, function string, message string) {

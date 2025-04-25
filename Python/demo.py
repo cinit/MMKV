@@ -204,7 +204,9 @@ def test_remove_storage():
     kv = mmkv.MMKV("test_remove", mmkv.MMKVMode.MultiProcess)
     kv.set(True, "bool")
 
+    print("check exist = ", mmkv.MMKV.checkExist("test_remove"))
     mmkv.MMKV.removeStorage("test_remove")
+    print("after remove, check exist = ", mmkv.MMKV.checkExist("test_remove"))
     kv = mmkv.MMKV("test_remove", mmkv.MMKVMode.MultiProcess)
     if kv.count() != 0:
         print("storage not successfully remove")
@@ -214,7 +216,9 @@ def test_remove_storage():
     kv = mmkv.MMKV("test_remove/sg", rootDir=rootDir)
     kv.set(True, "bool")
 
-    mmkv.MMKV.removeStorage("test_remove/sg")
+    print("check exist = ", mmkv.MMKV.checkExist("test_remove/sg", rootDir=rootDir))
+    mmkv.MMKV.removeStorage("test_remove/sg", rootDir=rootDir)
+    print("after remove, check exist = ", mmkv.MMKV.checkExist("test_remove/sg", rootDir=rootDir))
     kv = mmkv.MMKV("test_remove/sg", rootDir=rootDir)
     if kv.count() != 0:
         print("storage not successfully remove")
@@ -240,6 +244,39 @@ def test_read_only():
 
     os.chmod(path, 0o666)
     os.chmod(crc_path, 0o666)
+
+
+def test_import():
+    mmap_id = "testImportSrc"
+    src = mmkv.MMKV(mmap_id)
+    src.set(True, "bool")
+    src.set(-2147483648, "int")  # Integer.MIN_VALUE
+    src.set(9223372036854775807, "long")  # Long.MAX_VALUE
+    src.set("test import", "string")
+
+    dst = mmkv.MMKV("testImportDst")
+    dst.clearAll()
+    dst.enableAutoKeyExpire(1)
+    dst.set(False, "bool")
+    dst.set(-1, "int")  # Integer.MIN_VALUE
+    dst.set(0, "long")  # Long.MAX_VALUE
+    dst.set(mmap_id, "string")
+
+    count = dst.importFrom(src)
+    if count != 4 or dst.count() != 4:
+        print("MMKV: import check count fail")
+    if not dst.getBool("bool"):
+        print("MMKV: import check bool fail:", dst.getBool("bool"))
+    if dst.getInt("int") != -2147483648:
+        print("MMKV: import check int fail:", dst.getInt("int"))
+    if dst.getLongUInt("long") != 9223372036854775807:
+        print("MMKV: import check long fail", dst.getLongUInt("long"))
+    if dst.getString("string") != "test import":
+        print("MMKV: import check string fail", dst.getString("string"))
+
+    time.sleep(2)  # Sleep for 2 seconds
+    if dst.count(True) != 0:
+        print("MMKV: import check expire fail")
 
 
 def test_namespace():
@@ -300,6 +337,7 @@ if __name__ == '__main__':
     test_compare_before_set()
     test_remove_storage()
     test_read_only()
+    test_import()
 
     # mmkv.MMKV.unRegisterLogHandler()
     # mmkv.MMKV.unRegisterErrorHandler()

@@ -125,6 +125,7 @@ PYBIND11_MODULE(mmkv, m) {
 
     clsNameSpace.def("removeStorage", &NameSpace::removeStorage);
     clsNameSpace.def("isFileValid", &NameSpace::isFileValid);
+    clsNameSpace.def("checkExist", &NameSpace::checkExist);
 
     py::class_<MMKV, unique_ptr<MMKV, py::nodelete>> clsMMKV(m, "MMKV");
 
@@ -284,6 +285,7 @@ PYBIND11_MODULE(mmkv, m) {
     clsMMKV.def("remove", &MMKV::removeValuesForKeys, py::arg("keys"));
     clsMMKV.def("clearAll", &MMKV::clearAll, py::arg("keepSpace") = false, "remove all key-values");
     clsMMKV.def("trim", &MMKV::trim, "call this method after lots of removing if you care about disk usage");
+    clsMMKV.def("importFrom", &MMKV::importFrom, "import all key-value items from others");
     clsMMKV.def("clearMemoryCache", &MMKV::clearMemoryCache, "call this method if you are facing memory-warning");
 
     clsMMKV.def("sync", &MMKV::sync, py::arg("flag") = MMKV_SYNC,
@@ -435,4 +437,12 @@ PYBIND11_MODULE(mmkv, m) {
        },
        "detect if the MMKV file is valid or not", py::arg("mmapID"),
        py::arg("rootDir") = MMKVPath_t());
+
+    clsMMKV.def_static("checkExist",
+                       [](const string &mmapID, const MMKVPath_t &rootDir) {
+                           MMKVPath_t *rootDirPtr = (!rootDir.empty()) ? (MMKVPath_t *) &rootDir : nullptr;
+                           return MMKV::checkExist(mmapID, rootDirPtr);
+                       },
+                       "check if the MMKV file is exist or not", py::arg("mmapID"),
+                       py::arg("rootDir") = MMKVPath_t());
 }

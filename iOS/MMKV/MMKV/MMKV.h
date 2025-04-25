@@ -154,6 +154,7 @@ class MMKV;
 + (void)onAppTerminate;
 
 + (NSString *)mmkvBasePath;
++ (nullable NSString *)mmkvGroupPath;
 
 /// get a namespace with custom root dir
 + (MMKVNameSpace *)nameSpace:(NSString *)rootPath;
@@ -313,6 +314,10 @@ class MMKV;
 // note that `clearAll` has the similar effect of `trim`
 - (void)trim;
 
+// import all key-value items from source
+// return count of items imported
+- (size_t)importFrom:(MMKV *)src;
+
 /// call this method if the instance is no longer needed in the near future
 /// any subsequent call to the instance is undefined behavior
 - (void)close;
@@ -412,6 +417,10 @@ class MMKV;
 + (BOOL)removeStorage:(NSString *)mmapID rootPath:(nullable NSString *)path NS_SWIFT_NAME(removeStorage(for:rootPath:));
 + (BOOL)removeStorage:(NSString *)mmapID mode:(MMKVMode)mode NS_SWIFT_NAME(removeStorage(for:mode:));
 
+/// detect if the MMKV file exist or not
++ (BOOL)checkExist:(NSString *)mmapID rootPath:(nullable NSString *)path NS_SWIFT_NAME(removeStorage(for:rootPath:));
++ (BOOL)checkExist:(NSString *)mmapID mode:(MMKVMode)mode NS_SWIFT_NAME(removeStorage(for:mode:));
+
 // protection from potential misuse
 + (void)initialize NS_UNAVAILABLE;
 
@@ -473,6 +482,9 @@ class MMKV;
 /// remove the storage of the MMKV, including the data file & meta file (.crc)
 /// Note: the existing instance (if any) will be closed & destroyed
 - (BOOL)removeStorage:(NSString *)mmapID NS_SWIFT_NAME(removeStorage(for:));
+
+/// detect if the MMKV file exist or not
+- (BOOL)checkExist:(NSString *)mmapID NS_SWIFT_NAME(checkExist(for:));
 
 // protection from potential misuse
 - (instancetype)init NS_UNAVAILABLE;

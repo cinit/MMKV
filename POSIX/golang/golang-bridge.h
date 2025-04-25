@@ -92,6 +92,7 @@ uint64_t actualSize(void *handle);
 void removeValueForKey(void *handle, GoStringWrap_t oKey);
 void removeValuesForKeys(void *handle, GoStringWrap_t *keyArray, uint64_t count);
 void clearAll(void *handle, bool keepSpace);
+uint64_t importFrom(void *handle, void *srcHandle);
 
 void mmkvSync(void *handle, bool sync);
 void clearMemoryCache(void *handle);
@@ -122,6 +123,8 @@ bool isMultiProcess(void *handle);
 bool isReadOnly(void *handle);
 
 bool getNameSpace(GoStringWrap_t rootPath);
+
+bool checkExist(GoStringWrap_t mmapID, GoStringWrap_t rootPath);
 
 #ifdef __cplusplus
 }

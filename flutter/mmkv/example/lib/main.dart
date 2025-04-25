@@ -26,13 +26,13 @@ import "dart:typed_data";
 import "package:flutter/material.dart";
 import "package:mmkv/mmkv.dart";
 import "package:path_provider_foundation/path_provider_foundation.dart";
-import 'package:path_provider/path_provider.dart';
+import "package:path_provider/path_provider.dart";
 // import "package:posix/posix.dart" show chmod;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  var groupDir = null;
+  String? groupDir;
   if (Platform.isIOS) {
     final PathProviderFoundation provider = PathProviderFoundation();
     groupDir = await provider.getContainerPath(appGroupIdentifier: "group.tencent.mmkv");
@@ -187,34 +187,35 @@ class _MyAppState extends State<MyApp> {
               onPressed: () {
                 functionalTest();
                 // testReadOnly();
+                testImport();
               },
-              child: Text("Functional Test", style: TextStyle(fontSize: 18))),
+              child: const Text("Functional Test", style: TextStyle(fontSize: 18))),
           TextButton(
               onPressed: () {
                 testReKey();
               },
-              child: Text("Encryption Test", style: TextStyle(fontSize: 18))),
+              child: const Text("Encryption Test", style: TextStyle(fontSize: 18))),
           TextButton(
               onPressed: () {
                 testAutoExpire();
               },
-              child: Text("Auto Expiration Test", style: TextStyle(fontSize: 18))),
+              child: const Text("Auto Expiration Test", style: TextStyle(fontSize: 18))),
           TextButton(
               onPressed: () {
                 testCompareBeforeSet();
               },
-              child: Text("Compare Before Insert/Update Test", style: TextStyle(fontSize: 18))),
+              child: const Text("Compare Before Insert/Update Test", style: TextStyle(fontSize: 18))),
           TextButton(
               onPressed: () {
                 testBackup();
                 testRestore();
               },
-              child: Text("Backup & Restore Test", style: TextStyle(fontSize: 18))),
+              child: const Text("Backup & Restore Test", style: TextStyle(fontSize: 18))),
           TextButton(
               onPressed: () {
-                testRemoveStorage();
+                testRemoveStorageAndCheckExist();
               },
-              child: Text("Remove Storage Test", style: TextStyle(fontSize: 18))),
+              child: const Text("Remove Storage & Check Exist Test", style: TextStyle(fontSize: 18))),
         ])),
       ),
     );
@@ -260,11 +261,11 @@ class _MyAppState extends State<MyApp> {
     print('contains "string": ${mmkv.containsKey('string')}');
 
     str += " with bytes";
-    var bytes = MMBuffer.fromList(Utf8Encoder().convert(str))!;
+    var bytes = MMBuffer.fromList(const Utf8Encoder().convert(str))!;
     mmkv.encodeBytes("bytes", bytes);
     bytes.destroy();
     bytes = mmkv.decodeBytes("bytes")!;
-    print("bytes = ${Utf8Decoder().convert(bytes.asList()!)}");
+    print("bytes = ${const Utf8Decoder().convert(bytes.asList()!)}");
     bytes.destroy();
 
     // test empty bytes
@@ -303,6 +304,7 @@ class _MyAppState extends State<MyApp> {
     // mmkv.sync(true);
     // mmkv.close();
     mmkv.checkContentChangedByOuterProcess();
+    print("is file valid: ${MMKV.isFileValid(mmkv.mmapID)}");
   }
 
   MMKV testMMKV(String mmapID, String? cryptKey, bool decodeOnly, String? rootPath) {
@@ -312,7 +314,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   void testReKey() {
-    final mmapID = "testAES_reKey1";
+    const mmapID = "testAES_reKey1";
     final MMKV kv = testMMKV(mmapID, null, false, null);
 
     kv.reKey("Key_seq_1");
@@ -330,26 +332,26 @@ class _MyAppState extends State<MyApp> {
 
   void testBackup() {
     final rootDir = FileSystemEntity.parentOf(MMKV.rootDir);
-    var backupRootDir = rootDir + "/mmkv_backup_3";
-    final String mmapID = "test/AES";
-    final String cryptKey = "Tencent MMKV";
-    final String otherDir = rootDir + "/mmkv_3";
+    var backupRootDir = "$rootDir/mmkv_backup_3";
+    const String mmapID = "test/AES";
+    const String cryptKey = "Tencent MMKV";
+    final String otherDir = "$rootDir/mmkv_3";
     testMMKV(mmapID, cryptKey, false, otherDir);
 
     final ret = MMKV.backupOneToDirectory(mmapID, backupRootDir, rootDir: otherDir);
     print("backup one [$mmapID] return: $ret");
 
-    backupRootDir = rootDir + "/mmkv_backup";
+    backupRootDir = "$rootDir/mmkv_backup";
     final count = MMKV.backupAllToDirectory(backupRootDir);
     print("backup all count: $count");
   }
 
   void testRestore() {
     final rootDir = FileSystemEntity.parentOf(MMKV.rootDir);
-    var backupRootDir = rootDir + "/mmkv_backup_3";
-    final String mmapID = "test/AES";
-    final String cryptKey = "Tencent MMKV";
-    final String otherDir = rootDir + "/mmkv_3";
+    var backupRootDir = "$rootDir/mmkv_backup_3";
+    const String mmapID = "test/AES";
+    const String cryptKey = "Tencent MMKV";
+    final String otherDir = "$rootDir/mmkv_3";
 
     final kv = MMKV(mmapID, cryptKey: cryptKey, rootDir: otherDir);
     kv.encodeString("test_restore", "value before restore");
@@ -360,7 +362,7 @@ class _MyAppState extends State<MyApp> {
       print("after restore [${kv.mmapID}] allKeys: ${kv.allKeys}");
     }
 
-    backupRootDir = rootDir + "/mmkv_backup";
+    backupRootDir = "$rootDir/mmkv_backup";
     final count = MMKV.restoreAllFromDirectory(backupRootDir);
     print("restore all count $count");
     if (count > 0) {
@@ -390,7 +392,7 @@ class _MyAppState extends State<MyApp> {
     }
     mmkv.encodeBool("never_expire_key_1", true, MMKV.ExpireNever);
 
-    final duration = const Duration(seconds: 2);
+    const duration = Duration(seconds: 2);
     sleep(duration);
 
     print("auto_expire_key_1: ${mmkv.containsKey("auto_expire_key_1")}");
@@ -412,8 +414,8 @@ class _MyAppState extends State<MyApp> {
     mmkv.encodeString("key", "extra");
 
     {
-      final String key = "int";
-      final int v = 12345;
+      const String key = "int";
+      const int v = 12345;
       mmkv.encodeInt32(key, v);
       final actualSize = mmkv.actualSize;
       print("testCompareBeforeSet actualSize = $actualSize");
@@ -431,8 +433,8 @@ class _MyAppState extends State<MyApp> {
     }
 
     {
-      final key = "string";
-      final v = "w012A🏊🏻good";
+      const key = "string";
+      const v = "w012A🏊🏻good";
       mmkv.encodeString(key, v);
       final actualSize = mmkv.actualSize;
       print("testCompareBeforeSet actualSize = $actualSize");
@@ -450,13 +452,16 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
-  void testRemoveStorage() {
+  void testRemoveStorageAndCheckExist() {
     var mmapID = "test_remove";
     {
       final mmkv = MMKV(mmapID, mode: MMKVMode.MULTI_PROCESS_MODE);
       mmkv.encodeBool("bool", true);
     }
-    MMKV.removeStorage(mmapID);
+    var rootDir = Platform.isIOS ? MMKV.groupPath() : null;
+    print("check exist = ${MMKV.checkExist(mmapID, rootDir: rootDir)}");
+    MMKV.removeStorage(mmapID, rootDir: rootDir);
+    print("after remove, check exist = ${MMKV.checkExist(mmapID, rootDir: rootDir)}");
     {
       final mmkv = MMKV(mmapID, mode: MMKVMode.MULTI_PROCESS_MODE);
       if (mmkv.count != 0) {
@@ -465,10 +470,12 @@ class _MyAppState extends State<MyApp> {
     }
 
     mmapID = "test_remove/sg";
-    final rootDir = MMKV.rootDir + "_sg";
+    rootDir = "${MMKV.rootDir}_sg";
     var mmkv = MMKV(mmapID, rootDir: rootDir);
     mmkv.encodeBool("bool", true);
+    print("check exist = ${MMKV.checkExist(mmapID, rootDir: rootDir)}");
     MMKV.removeStorage(mmapID, rootDir: rootDir);
+    print("after remove, check exist = ${MMKV.checkExist(mmapID, rootDir: rootDir)}");
     mmkv = MMKV(mmapID, rootDir: rootDir);
     if (mmkv.count != 0) {
       print("storage not successfully removed");
@@ -476,8 +483,8 @@ class _MyAppState extends State<MyApp> {
   }
 
   void testReadOnly() {
-    final name = "testReadOnly";
-    final key = "ReadOnly+Key";
+    const name = "testReadOnly";
+    const key = "ReadOnly+Key";
     {
       final mmkv = MMKV(name, cryptKey: key);
       _testMMKVImp(mmkv, false);
@@ -501,5 +508,45 @@ class _MyAppState extends State<MyApp> {
     chmod(path, "666");
     chmod(crcPath, "666");
     */
+  }
+
+  void testImport() {
+    const String mmapID = "testImportSrc";
+    final MMKV src = MMKV(mmapID);
+    src.encodeBool("bool", true);
+    src.encodeInt32("int", -2147483648); // Integer.MIN_VALUE in Dart
+    src.encodeInt("long", 9223372036854775807); // Long.MAX_VALUE in Dart
+    src.encodeString("string", "test import");
+
+    final MMKV dst = MMKV("testImportDst");
+    dst.clearAll();
+    dst.enableAutoKeyExpire(1);
+    dst.encodeBool("bool", false);
+    dst.encodeInt32("int", -1);
+    dst.encodeInt("long", 0);
+    dst.encodeString("string", mmapID);
+
+    final int count = dst.importFrom(src);
+    if (count != 4 || dst.count != 4) {
+      print("MMKV: import check count fail");
+    }
+    if (!dst.decodeBool("bool")) {
+      print("MMKV: import check bool fail");
+    }
+    if (dst.decodeInt32("int") != -2147483648) {
+      print("MMKV: import check int fail");
+    }
+    if (dst.decodeInt("long") != 9223372036854775807) {
+      print("MMKV: import check long fail");
+    }
+    if (dst.decodeString("string") != "test import") {
+      print("MMKV: import check string fail");
+    }
+
+    Future.delayed(const Duration(seconds: 2), () {
+      if (dst.countNonExpiredKeys != 0) {
+        print("MMKV: import check expire fail");
+      }
+    });
   }
 }

@@ -1338,6 +1338,21 @@ static napi_value trim(napi_env env, napi_callback_info info) {
     return NAPIUndefined(env);
 }
 
+static napi_value importFrom(napi_env env, napi_callback_info info) {
+    size_t argc = 2;
+    napi_value args[2] = {nullptr};
+    NAPI_CALL(napi_get_cb_info(env, info, &argc, args, nullptr, nullptr));
+
+    auto handle = NValueToUInt64(env, args[0]);
+    auto srcHandle = NValueToUInt64(env, args[1]);
+    MMKV *kv = reinterpret_cast<MMKV *>(handle);
+    MMKV *kvSrc = reinterpret_cast<MMKV *>(srcHandle);
+    if (kv && kvSrc) {
+       return UInt64ToNValue(env, kv->importFrom(kvSrc));
+    }
+    return NAPIUndefined(env);
+}
+
 static napi_value mmkvClose(napi_env env, napi_callback_info info) {
     size_t argc = 1;
     napi_value args[1] = {nullptr};
@@ -1696,6 +1711,22 @@ static napi_value getNameSpace(napi_env env, napi_callback_info info) {
     return BoolToNValue(env, false);
 }
 
+static napi_value checkExist(napi_env env, napi_callback_info info) {
+    size_t argc = 2;
+    napi_value args[2] = {nullptr};
+    NAPI_CALL(napi_get_cb_info(env, info, &argc, args, nullptr, nullptr));
+
+    auto mmapID = NValueToString(env, args[0]);
+    if (!mmapID.empty()) {
+        auto rootPath = NValueToString(env, args[1], true);
+        if (rootPath.empty()) {
+            return BoolToNValue(env, MMKV::checkExist(mmapID));
+        }
+        return BoolToNValue(env, MMKV::checkExist(mmapID, &rootPath));
+    }
+    return NAPIUndefined(env);
+}
+
 EXTERN_C_START
 static napi_value Init(napi_env env, napi_value exports) {
     napi_property_descriptor desc[] = {
@@ -1779,6 +1810,8 @@ static napi_value Init(napi_env env, napi_value exports) {
         { "isReadOnly", nullptr, isReadOnly, nullptr, nullptr, nullptr, napi_default, nullptr },
         { "checkContentChanged", nullptr, checkContentChanged, nullptr, nullptr, nullptr, napi_default, nullptr },
         { "getNameSpace", nullptr, getNameSpace, nullptr, nullptr, nullptr, napi_default, nullptr },
+        { "checkExist", nullptr, checkExist, nullptr, nullptr, nullptr, napi_default, nullptr },
+        { "importFrom", nullptr, importFrom, nullptr, nullptr, nullptr, napi_default, nullptr },
     };
     napi_define_properties(env, exports, sizeof(desc) / sizeof(desc[0]), desc);
     return exports;

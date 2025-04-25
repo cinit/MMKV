@@ -51,7 +51,9 @@ static void freeStringArray(GoStringWrap_t *a, size_t size) {
 }
 */
 import "C"
-import "unsafe"
+import (
+	"unsafe"
+)
 import "math"
 
 const (
@@ -170,6 +172,10 @@ type MMKV interface {
 	// ClearAll clear all key-values
 	ClearAll()
 	ClearAllKeepSpace()
+
+	// ImportFrom import all key-value items from src
+	// Return count of items imported
+	ImportFrom(src MMKV) uint64
 
 	// Count return count of keys
 	Count() uint64
@@ -366,6 +372,13 @@ func GetRootDir() string {
 	root := C.getRootDir()
 	goStr := C.GoString(root)
 	return goStr
+}
+
+// CheckExist Check the existence of the MMKV
+func CheckExist(mmapID string) bool {
+	cStrNull := C.GoStringWrapNil()
+	ret := C.checkExist(C.wrapGoString(mmapID), cStrNull)
+	return bool(ret)
 }
 
 // GetNameSpace Get a wrapper of customize root path.
@@ -656,6 +669,14 @@ func (kv ctorMMKV) Trim() {
 	C.trim(unsafe.Pointer(kv))
 }
 
+func (kv ctorMMKV) ImportFrom(src MMKV) uint64 {
+	srcCtor, ok := src.(ctorMMKV)
+	if !ok {
+		return 0
+	}
+	return uint64(C.importFrom(unsafe.Pointer(kv), unsafe.Pointer(srcCtor)))
+}
+
 func (kv ctorMMKV) Close() {
 	C.mmkvClose(unsafe.Pointer(kv))
 }
@@ -783,7 +804,14 @@ func (ns *NameSpace) RestoreAllFromDirectory(srcDir string) uint64 {
 // RemoveStorage Remove the storage of the MMKV inside NameSpace, including the data file & meta file (.crc)
 // Note: the existing instance (if any) will be closed & destroyed
 func (ns *NameSpace) RemoveStorage(mmapID string) bool {
-	cStrNull := C.GoStringWrapNil()
-	ret := C.removeStorage(C.wrapGoString(mmapID), cStrNull)
+	root := C.wrapGoString(ns.rootDir)
+	ret := C.removeStorage(C.wrapGoString(mmapID), root)
+	return bool(ret)
+}
+
+// CheckExist Check the existence of the MMKV inside NameSpace
+func (ns *NameSpace) CheckExist(mmapID string) bool {
+	root := C.wrapGoString(ns.rootDir)
+	ret := C.checkExist(C.wrapGoString(mmapID), root)
 	return bool(ret)
 }

@@ -32,15 +32,19 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+
 import com.tencent.mmkv.MMKV;
 import com.tencent.mmkv.NameSpace;
 import com.tencent.mmkv.NativeBuffer;
 
 import java.io.File;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity {
     static private final String KEY_1 = "Ashmem_Key_1";
@@ -48,7 +52,17 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Enable edge-to-edge display
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         setContentView(R.layout.activity_main);
+
+        View mainLayout = findViewById(R.id.main_layout);
+        ViewCompat.setOnApplyWindowInsetsListener(mainLayout, (v, insets) -> {
+            int statusBarHeight = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top;
+            int navigationBarHeight = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom;
+            v.setPadding(0, statusBarHeight, 0, navigationBarHeight);
+            return insets;
+        });
 
         TextView tv = (TextView) findViewById(R.id.sample_text);
         String rootDir = MMKV.getRootDir();
@@ -134,9 +148,10 @@ public class MainActivity extends AppCompatActivity {
         testCompareBeforeSet();
         testClearAllKeepSpace();
 //        testFastNativeSpeed();
-        testRemoveStorage();
+        testRemoveStorageAndCheckExist();
         overrideTest();
         testReadOnly();
+        testImport();
     }
 
     private void testCompareBeforeSet() {
@@ -821,13 +836,15 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void testRemoveStorage() {
+    private void testRemoveStorageAndCheckExist() {
         String mmapID = "test_remove";
         {
             MMKV mmkv = MMKV.mmkvWithID(mmapID, MMKV.MULTI_PROCESS_MODE);
             mmkv.encode("bool", true);
         }
+        Log.i("MMKV", "checkExist = " + MMKV.checkExist(mmapID));
         MMKV.removeStorage(mmapID);
+        Log.i("MMKV", "after remove, checkExist = " + MMKV.checkExist(mmapID));
         {
             MMKV mmkv = MMKV.mmkvWithID(mmapID, MMKV.MULTI_PROCESS_MODE);
             if (mmkv.count() != 0) {
@@ -839,7 +856,9 @@ public class MainActivity extends AppCompatActivity {
         String rootDir = getFilesDir().getAbsolutePath() + "/mmkv_sg";
         MMKV mmkv = MMKV.mmkvWithID(mmapID, rootDir);
         mmkv.encode("bool", true);
+        Log.i("MMKV", "checkExist = " + MMKV.checkExist(mmapID, rootDir));
         MMKV.removeStorage(mmapID, rootDir);
+        Log.i("MMKV", "after remove, checkExist = " + MMKV.checkExist(mmapID, rootDir));
         mmkv = MMKV.mmkvWithID(mmapID, rootDir);
         if (mmkv.count() != 0) {
             Log.e("MMKV", "storage not successfully removed");
@@ -967,5 +986,44 @@ public class MainActivity extends AppCompatActivity {
 
         file.setWritable(true);
         crcFile.setWritable(true);
+    }
+
+    private void testImport() {
+        final String mmapID = "testImportSrc";
+        MMKV src = MMKV.mmkvWithID(mmapID);
+        src.encode("bool", true);
+        src.encode("int", Integer.MIN_VALUE);
+        src.encode("long", Long.MAX_VALUE);
+        src.encode("string", "test import");
+
+        MMKV dst = MMKV.mmkvWithID("testImportDst");
+        dst.clearAll();
+        dst.enableAutoKeyExpire(1);
+        dst.encode("bool", false);
+        dst.encode("int", -1);
+        dst.encode("long", 0);
+        dst.encode("string", mmapID);
+
+        long count = dst.importFrom(src);
+        if (count != 4 || dst.count() != 4) {
+            Log.e("MMKV", "import check count fail");
+        }
+        if (!dst.decodeBool("bool")) {
+            Log.e("MMKV", "import check bool fail");
+        }
+        if (dst.decodeInt("int") != Integer.MIN_VALUE) {
+            Log.e("MMKV", "import check int fail");
+        }
+        if (dst.decodeLong("long") != Long.MAX_VALUE) {
+            Log.e("MMKV", "import check long fail");
+        }
+        if (!Objects.equals(dst.decodeString("string"), "test import")) {
+            Log.e("MMKV", "import check string fail");
+        }
+
+        SystemClock.sleep(1000 * 2);
+        if (dst.countNonExpiredKeys() != 0) {
+            Log.e("MMKV", "import check expire fail");
+        }
     }
 }

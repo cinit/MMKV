@@ -191,16 +191,8 @@ public class MMKV implements SharedPreferences, SharedPreferences.Editor {
 
     public static String initialize(@NonNull Context context, String rootDir, LibLoader loader, MMKVLogLevel logLevel, MMKVHandler handler) {
         // if (!android.os.Process.is64Bit()) {
-        //     throw new UnsupportedArchitectureException("MMKV 2.0+ requires 64-bit App, use 1.3.x instead.");
+        //    throw new UnsupportedArchitectureException("MMKV 2.0+ requires 64-bit App, use 1.3.x instead.");
         // }
-        // disable process mode in release build
-        // FIXME: Find a better way to getApplicationInfo() without using context.
-        //  If any one knows how, you're welcome to make a contribution.
-        if ((context.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) == 0) {
-            disableProcessModeChecker();
-        } else {
-            enableProcessModeChecker();
-        }
         String cacheDir = context.getCacheDir().getAbsolutePath();
 
         gCallbackHandler = handler;
@@ -213,6 +205,16 @@ public class MMKV implements SharedPreferences, SharedPreferences.Editor {
         if (gCallbackHandler != null) {
             setCallbackHandler(gWantLogReDirecting, true);
         }
+
+        // disable process mode in release build
+        // FIXME: Find a better way to getApplicationInfo() without using context.
+        //  If any one knows how, you're welcome to make a contribution.
+        if ((context.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) == 0) {
+            disableProcessModeChecker();
+        } else {
+            enableProcessModeChecker();
+        }
+
         return ret;
     }
 
@@ -561,7 +563,7 @@ public class MMKV implements SharedPreferences, SharedPreferences.Editor {
         }
 
         String processName = MMKVContentProvider.getProcessNameByPID(context, android.os.Process.myPid());
-        if (processName == null || processName.length() == 0) {
+        if (processName == null || processName.isEmpty()) {
             String message = "process name detect fail, try again later";
             simpleLog(MMKVLogLevel.LevelError, message);
             throw new IllegalStateException(message);
@@ -622,7 +624,7 @@ public class MMKV implements SharedPreferences, SharedPreferences.Editor {
     }
 
     /**
-     * Create the default MMKV instance in customimize process mode, with an encryption key.
+     * Create the default MMKV instance in customize process mode, with an encryption key.
      *
      * @param mode     The process mode of the MMKV instance, defaults to {@link #SINGLE_PROCESS_MODE}.
      * @param cryptKey The encryption key of the MMKV instance (no more than 16 bytes).
@@ -677,6 +679,7 @@ public class MMKV implements SharedPreferences, SharedPreferences.Editor {
         synchronized (checkedHandleSet) {
             isProcessModeCheckerEnabled = true;
         }
+        enableDisableProcessMode(true);
         Log.i("MMKV", "Enable checkProcessMode()");
     }
 
@@ -689,6 +692,7 @@ public class MMKV implements SharedPreferences, SharedPreferences.Editor {
         synchronized (checkedHandleSet) {
             isProcessModeCheckerEnabled = false;
         }
+        enableDisableProcessMode(false);
         Log.i("MMKV", "Disable checkProcessMode()");
     }
 
@@ -913,9 +917,7 @@ public class MMKV implements SharedPreferences, SharedPreferences.Editor {
         Set<String> a;
         try {
             a = cls.newInstance();
-        } catch (IllegalAccessException e) {
-            return defaultValue;
-        } catch (InstantiationException e) {
+        } catch (IllegalAccessException | InstantiationException e) {
             return defaultValue;
         }
         a.addAll(Arrays.asList(result));
@@ -977,7 +979,6 @@ public class MMKV implements SharedPreferences, SharedPreferences.Editor {
         return encodeBytes_2(nativeHandle, key, bytes, expireDurationInSecond);
     }
 
-    @SuppressWarnings("unchecked")
     @Nullable
     public <T extends Parcelable> T decodeParcelable(String key, Class<T> tClass) {
         return decodeParcelable(key, tClass, null);
@@ -1132,6 +1133,14 @@ public class MMKV implements SharedPreferences, SharedPreferences.Editor {
     public native void trim();
 
     /**
+     * import all key-value items from src
+     * @return count of items imported
+     */
+    public long importFrom(MMKV src) {
+        return importFrom(nativeHandle, src.nativeHandle);
+    }
+
+    /**
      * Call this method if the MMKV instance is no longer needed in the near future.
      * Any subsequent call to any MMKV instances with the same ID is undefined behavior.
      */
@@ -1197,6 +1206,21 @@ public class MMKV implements SharedPreferences, SharedPreferences.Editor {
      * @param rootPath The folder of the MMKV instance, defaults to $(FilesDir)/mmkv.
      */
     public static native boolean removeStorage(String mmapID, @Nullable String rootPath);
+
+    /**
+     * check existence of the MMKV file
+     * @param mmapID   The unique ID of the MMKV instance.
+     */
+    public static boolean checkExist(String mmapID) {
+        return checkExist(mmapID, null);
+    }
+
+    /**
+     * check existence of the MMKV file
+     * @param mmapID   The unique ID of the MMKV instance.
+     * @param rootPath The folder of the MMKV instance, defaults to $(FilesDir)/mmkv.
+     */
+    public static native boolean checkExist(String mmapID, @Nullable String rootPath);
 
     /**
      * Atomically migrate all key-values from an existent SharedPreferences to the MMKV instance.
@@ -1821,7 +1845,11 @@ public class MMKV implements SharedPreferences, SharedPreferences.Editor {
     @FastNative
     private native boolean isExpirationEnabled();
 
+    private static native void enableDisableProcessMode(boolean enable);
+
     private static native boolean checkProcessMode(long handle);
 
     private static native boolean getNameSpace(String rootPath);
+
+    private native long importFrom(long handle, long srcHandle);
 }

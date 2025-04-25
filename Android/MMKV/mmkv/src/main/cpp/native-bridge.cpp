@@ -1091,6 +1091,37 @@ MMKV_JNI jboolean getNameSpace(JNIEnv *env, jclass type, jstring rootPath) {
     return (jboolean) false;
 }
 
+MMKV_JNI jboolean checkExist(JNIEnv *env, jclass type, jstring oMmapID, jstring rootPath) {
+    if (oMmapID) {
+        string mmapID = jstring2string(env, oMmapID);
+        if (!rootPath) {
+            return (jboolean) MMKV::checkExist(mmapID, nullptr);
+        } else {
+            auto root = jstring2string(env, rootPath);
+            return (jboolean) MMKV::checkExist(mmapID, &root);
+        }
+    }
+    return (jboolean) false;
+}
+
+MMKV_JNI void enableDisableProcessMode(JNIEnv *env, jclass type, jboolean notify) {
+    if (notify == JNI_TRUE) {
+        MMKV::enableDisableProcessMode(true);
+    } else {
+        MMKV::enableDisableProcessMode(false);
+    }
+}
+
+MMKV_JNI jlong importFrom(JNIEnv *env, jobject instance, jlong handle, jlong srcHandle) {
+    MMKV *kv = reinterpret_cast<MMKV *>(handle);
+    MMKV *src = reinterpret_cast<MMKV *>(srcHandle);
+    if (kv && src) {
+        jlong size = kv->importFrom(src);
+        return size;
+    }
+    return 0;
+}
+
 } // namespace mmkv
 
 static JNINativeMethod g_methods[] = {
@@ -1176,6 +1207,9 @@ static JNINativeMethod g_methods[] = {
     {"isMultiProcess", "()Z", (void *) mmkv::isMultiProcess},
     {"isReadOnly", "()Z", (void *) mmkv::isReadOnly},
     {"getNameSpace", "(Ljava/lang/String;)Z", (void *)mmkv::getNameSpace},
+    {"checkExist", "(Ljava/lang/String;Ljava/lang/String;)Z", (void *) mmkv::checkExist},
+    {"enableDisableProcessMode", "(Z)V", (void *) mmkv::enableDisableProcessMode},
+    {"importFrom", "(JJ)J", (void *) mmkv::importFrom},
 };
 
 static int registerNativeMethods(JNIEnv *env, jclass cls) {

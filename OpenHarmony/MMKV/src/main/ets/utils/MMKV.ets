@@ -24,7 +24,6 @@ import { MMKVLogLevel } from './MMKVLogLevel';
 import { getObjKeys } from './Util';
 import { NativeBuffer } from './NativeBuffer';
 import { MMKVHandler } from './MMKVHandler';
-// import { NameSpace } from './NameSpace';
 import common from '@ohos.app.ability.common';
 import dataPreferences from '@ohos.data.preferences';
 
@@ -644,6 +643,14 @@ export class MMKV {
     }
 
     /**
+     * import all key-value items from src
+     * @returns count of items imported
+     */
+    public importFrom(src: MMKV): bigint {
+        return native.importFrom(this.nativeHandle, src.nativeHandle);
+    }
+
+    /**
      * Call this method if the MMKV instance is no longer needed in the near future.
      * Any subsequent call to any MMKV instances with the same ID is undefined behavior.
      */
@@ -979,6 +986,10 @@ export class MMKV {
     public checkContentChanged(): void {
         native.checkContentChanged(this.nativeHandle);
     }
+
+    public static checkExist(mmapID: string, rootPath?: string): boolean {
+        return native.checkExist(mmapID, rootPath);
+    }
 }
 
 /**
@@ -1047,5 +1058,13 @@ class NameSpace {
      */
     public restoreOneFromDirectory(mmapID: string, srcDir: string): boolean {
         return native.restoreOneFromDirectory(mmapID, srcDir, this._rootDir);
+    }
+
+    /**
+     * Check the existence of the MMKV file.
+     * @param mmapID   The unique ID of the MMKV instance.
+     */
+    public checkExist(mmapID: string): boolean {
+        return native.checkExist(mmapID, this._rootDir);
     }
 }

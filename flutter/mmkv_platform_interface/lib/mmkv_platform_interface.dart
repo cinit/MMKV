@@ -328,6 +328,22 @@ class MMKVPluginPlatform {
     final result = await getTemporaryDirectory();
     return result.path;
   }
+
+  int Function(Pointer<Utf8> mmapID, Pointer<Utf8> rootPath) checkExistFunc() {
+    throw UnimplementedError();
+  }
+
+  int Function(Pointer<Utf8> mmapID, Pointer<Utf8> rootPath) isFileValidFunc() {
+    throw UnimplementedError();
+  }
+
+  Pointer<Utf8> Function() groupPathFunc() {
+    throw UnimplementedError();
+  }
+
+  int Function(Pointer<Void> handle, Pointer<Void> srcHandle) importFromFunc() {
+    throw UnimplementedError();
+  }
 }
 
 typedef LogCallbackWrap = Void Function(Uint32, Pointer<Utf8>, Int32, Pointer<Utf8>, Pointer<Utf8>);
